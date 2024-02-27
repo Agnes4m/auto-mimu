@@ -1,4 +1,5 @@
 """工具类"""
+
 import base64
 import random
 import time
@@ -264,7 +265,7 @@ def generate_qrcode(url):
     qr.make(fit=True)
     img = qr.make_image(fill_color="black", back_color="white")
     bio = BytesIO()
-    img.save(bio, format="PNG")
+    img.save(bio)
     img.save("login.png")
     # 获取二维码的模块 (module) 列表
     qr_modules = qr.get_matrix()
@@ -274,3 +275,4 @@ def generate_qrcode(url):
         line = "".join(chaes[pixel] for pixel in row)
         print(line)
         log.debug(line)
+    return img

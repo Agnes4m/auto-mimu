@@ -9,9 +9,12 @@ from typing import Dict, List, Optional, Union
 
 import orjson
 import yaml  # pylint: disable=wrong-import-order
+from pydantic import (  # pylint: disable=no-name-in-module
+    BaseModel,
+    ValidationError,
+    validator,
+)
 
-# from pydantic import BaseModel, ValidationError, field_validator # pylint: disable=no-name-in-module
-from pydantic import BaseModel, ValidationError
 from .logger import log
 
 ROOT_PATH = Path(__file__).parent.parent.absolute()
@@ -72,29 +75,29 @@ class Account(BaseModel):
     )
     """登录社区时所用浏览器的 User-Agent"""
 
-    CheckIn: bool = False
+    CheckIn: bool = True
     """社区成长值签到，启用功能意味着你愿意自行承担相关风险"""
-    BrowseUserPage: bool = False
+    BrowseUserPage: bool = True
     """社区浏览个人主页10秒，启用功能意味着你愿意自行承担相关风险"""
-    BrowsePost: bool = False
+    BrowsePost: bool = True
     """社区浏览帖子10秒，启用功能意味着你愿意自行承担相关风险"""
-    ThumbUp: bool = False
+    ThumbUp: bool = True
     """点赞帖子，启用功能意味着你愿意自行承担相关风险"""
-    BrowseSpecialPage: bool = False
+    BrowseSpecialPage: bool = True
     """社区在活动期间可能会出现限时的“浏览指定专题页”任务，启用功能意味着你愿意自行承担相关风险"""
-    BoardFollow: bool = False
+    BoardFollow: bool = True
     """社区可能会出现限时的“加入圈子”任务，启用功能意味着你愿意自行承担相关风险"""
-    CarrotPull: bool = False
+    CarrotPull: bool = True
     """社区拔萝卜，启用功能意味着你愿意自行承担相关风险"""
 
-    # @field_validator("password")
+    @validator("password")
     @classmethod
     def _password(cls, value: Optional[str]):  # pylint: disable=no-self-argument
         if len(value) == 32:
             return value
         return md5_crypto(value)
 
-    # @field_validator("cookies")
+    @validator("cookies")
     @classmethod
     def _cookies(cls, value: Union[dict, str]):  # pylint: disable=no-self-argument
         if isinstance(value, str):
@@ -186,10 +189,13 @@ class ConfigManager:
                         data = orjson.loads(file.read())
                     else:
                         data = yaml.safe_load(file)
-                new_model = Config.model_validate(data)
-                for attr in new_model.model_fields:
-                    # ConfigManager.data_obj.__setattr__(attr, new_model.__getattribute__(attr))
-                    setattr(ConfigManager.data_obj, attr, getattr(new_model, attr))
+                try:
+                    new_model = Config(**data)
+                except ValidationError:
+                    print("格式错了捏")
+                else:
+                    for attr in vars(new_model):
+                        setattr(ConfigManager.data_obj, attr, getattr(new_model, attr))
                 write_plugin_data(ConfigManager.data_obj)  # 同步配置
             except (ValidationError, JSONDecodeError):
                 log.exception(
